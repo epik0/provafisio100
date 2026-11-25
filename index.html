@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ventilação Mecânica — Assincronias e VNI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: #f4f7f9;
+      color: #1e293b;
+    }
+    .feedback-reveal {
+      animation: fadeSlideIn 0.22s ease-out forwards;
+    }
+    @keyframes fadeSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="min-h-screen antialiased selection:bg-sky-100 selection:text-sky-900">
+
+  <!-- Cabeçalho fixo com placar e filtros -->
+  <header class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 shadow-xs">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 py-3">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-50 text-sky-800 border border-sky-200">
+              Terapia Intensiva • Gabarito Imediato
+            </span>
+            <span class="text-xs text-slate-500 hidden sm:inline">24 questões comentadas + curvas</span>
+          </div>
+          <h1 class="text-lg sm:text-xl font-bold text-slate-900 tracking-tight mt-0.5">
+            Ventilação Mecânica: Assincronias e VNI
+          </h1>
+        </div>
+
+        <!-- Placar em tempo real -->
+        <div class="flex flex-wrap items-center justify-between md:justify-end gap-2 sm:gap-3">
+          <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs sm:text-sm">
+            <span class="font-medium text-slate-600">
+              Respondidas: <strong id="stat-answered" class="text-slate-900">0</strong>/24 (<strong id="stat-percent" class="text-slate-900">0%</strong>)
+            </span>
+            <span class="text-slate-300">|</span>
+            <span class="font-medium text-emerald-700">
+              Acertos: <strong id="stat-correct">0</strong>
+            </span>
+            <span class="text-slate-300">|</span>
+            <span class="font-medium text-rose-700">
+              Erros: <strong id="stat-wrong">0</strong>
+            </span>
+          </div>
+
+          <button
+            id="btn-reset-all"
+            type="button"
+            class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 active:scale-[0.99] transition cursor-pointer"
+          >
+            Reiniciar / Limpar
+          </button>
+        </div>
+      </div>
+
+      <!-- Barra de progresso -->
+      <div class="mt-2.5 w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+        <div
+          id="progress-bar"
+          class="h-full bg-sky-600 rounded-full transition-all duration-300"
+          style="width: 0%;"
+        ></div>
+      </div>
+
+      <!-- Filtros por parte, busca textual e revisão -->
+      <div class="mt-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2.5 pb-1">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-2 flex-1">
+          <div id="section-filters" class="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
+            <button data-section="ALL" class="filter-btn active px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer shrink-0 bg-sky-700 text-white">
+              Todas (24)
+            </button>
+            <button data-section="Assincronias" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer shrink-0 bg-slate-100 text-slate-700 hover:bg-slate-200">
+              Parte 1: Assincronias (14)
+            </button>
+            <button data-section="VNI" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer shrink-0 bg-slate-100 text-slate-700 hover:bg-slate-200">
+              Parte 2: VNI (10)
+            </button>
+          </div>
+
+          <div class="relative flex-1 max-w-md">
+            <input
+              id="search-input"
+              type="search"
+              placeholder="Buscar por palavra-chave, curva, modo ou gabarito..."
+              class="w-full px-3 py-1.5 rounded-lg text-xs sm:text-sm bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white transition"
+            />
+          </div>
+        </div>
+
+        <label class="inline-flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer select-none shrink-0">
+          <input
+            id="toggle-pending-or-wrong"
+            type="checkbox"
+            class="w-4 h-4 rounded border-slate-300 text-sky-700 focus:ring-sky-600 cursor-pointer"
+          />
+          <span>Mostrar apenas não respondidas ou erradas</span>
+        </label>
+      </div>
+    </div>
+  </header>
+
+  <!-- Conteúdo principal -->
+  <main class="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    <!-- Introdução -->
+    <section class="bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-6 mb-7 shadow-xs">
+      <p class="text-sm sm:text-base text-slate-700 leading-relaxed">
+        Compilação estruturada sobre <strong>interações paciente-ventilador (Parte 1: Assincronias Paciente-Ventilador)</strong> e <strong>modalidades não invasivas de suporte ventilatório (Parte 2: Ventilação Não Invasiva - VNI)</strong> baseada estritamente no documento <em>Questões Comentadas - Assincronias e VNI.docx</em>.
+      </p>
+      <p class="text-xs sm:text-sm text-sky-900 bg-sky-50/80 border border-sky-200/80 rounded-xl px-4 py-2.5 mt-3">
+        <strong>Como funciona:</strong> Todas as 24 questões ficam visíveis na tela. O gabarito não aparece antes de responder nem como resumo final acumulado: ao clicar em uma alternativa, você vê na hora se acertou ou errou, o destaque visual das opções e o comentário daquela questão. Nas questões 1 a 13, a página busca automaticamente os arquivos <code>q1.png</code> a <code>q13.png</code> na mesma pasta do <code>index.html</code> no GitHub.
+      </p>
+    </section>
+
+    <!-- Lista de todas as questões -->
+    <div id="quiz-container" class="space-y-8"></div>
+
+    <!-- Estado vazio quando filtro não encontra questões -->
+    <div id="empty-filter-state" class="hidden bg-white border border-slate-200 rounded-2xl p-8 text-center">
+      <p class="text-base font-semibold text-slate-800">Nenhuma questão corresponde ao filtro ou busca selecionada.</p>
+      <p class="text-sm text-slate-500 mt-1">Altere a parte, limpe o campo de busca ou desmarque o filtro de revisão.</p>
+    </div>
+  </main>
+
+  <script>
+    const QUIZ_SECTIONS = [
+      {
+        id: "Assincronias",
+        title: "Parte 1: Assincronias Paciente-Ventilador",
+        subtitle: "14 questões sobre interações paciente-ventilador, disparo, fluxo, rampa e ciclagem."
+      },
+      {
+        id: "VNI",
+        title: "Parte 2: Ventilação Não Invasiva (VNI)",
+        subtitle: "10 questões sobre CPAP, Bilevel, indicações, ajustes, resposta clínica e escore HACOR."
+      }
+    ];
+
+    const QUESTIONS = [
+      // ==================== PARTE 1: ASSINCRONIAS ====================
+      {
+        id: "q1",
+        section: "Assincronias",
+        numberLabel: "Questão 1",
+        tag: "Parte 1",
+        imageSrc: "q1.png",
+        prompt: "Um paciente em ventilação mecânica apresenta esforços inspiratórios visíveis, mas nem todos são seguidos por ciclos assistidos do ventilador. Na curva de pressão, observam-se pequenas deflexões negativas durante a expiração, sem disparo de um novo ciclo. Qual é a assincronia mais provável?",
+        options: [
+          { letter: "A", text: "Autodisparo" },
+          { letter: "B", text: "Disparo ineficaz" },
+          { letter: "C", text: "Duplo disparo" },
+          { letter: "D", text: "Ciclagem tardia" }
+        ],
+        correct: "B",
+        comment: "Gabarito: B) Disparo ineficaz. No disparo ineficaz, o paciente realiza esforço inspiratório perceptível (com pequenas deflexões negativas na curva de pressão ou alterações correspondentes no fluxo durante a expiração), porém esse esforço não atinge o limiar de sensibilidade para disparar um novo ciclo assistido do ventilador."
+      },
+      {
+        id: "q2",
+        section: "Assincronias",
+        numberLabel: "Questão 2",
+        tag: "Parte 1",
+        imageSrc: "q2.png",
+        prompt: "Durante a monitorização, observa-se que dois ciclos inspiratórios consecutivos ocorrem com intervalo expiratório muito curto ou praticamente ausente. O paciente mantém esforço inspiratório após o término do primeiro ciclo mecânico. Qual é a interpretação mais adequada?",
+        options: [
+          { letter: "A", text: "Duplo disparo" },
+          { letter: "B", text: "Autodisparo" },
+          { letter: "C", text: "Ciclagem precoce" },
+          { letter: "D", text: "Disparo ineficaz" }
+        ],
+        correct: "A",
+        comment: "Gabarito: A) Duplo disparo. O duplo disparo ocorre quando dois ciclos inspiratórios consecutivos acontecem separados por intervalo expiratório muito curto ou praticamente ausente, impulsionados pela manutenção do esforço inspiratório do paciente após o encerramento do primeiro ciclo mecânico."
+      },
+      {
+        id: "q3",
+        section: "Assincronias",
+        numberLabel: "Questão 3",
+        tag: "Parte 1",
+        imageSrc: "q3.png",
+        prompt: "Em um paciente sob ventilação controlada, observa-se que o ciclo do ventilador (iniciado por disparo controlado) é seguido, de forma relativamente constante, por um esforço inspiratório do paciente, aparentemente induzido pela insuflação mecânica. Esse padrão é característico de:",
+        options: [
+          { letter: "A", text: "Disparo ineficaz" },
+          { letter: "B", text: "Autodisparo" },
+          { letter: "C", text: "Disparo reverso" },
+          { letter: "D", text: "Fluxo insuficiente" }
+        ],
+        correct: "C",
+        comment: "Gabarito: C) Disparo reverso. O disparo reverso ocorre em ventilação controlada quando a insuflação mecânica desencadeia, de maneira repetitiva/consistente, um esforço inspiratório reflexo do paciente após o início do ciclo controlado."
+      },
+      {
+        id: "q4",
+        section: "Assincronias",
+        numberLabel: "Questão 4",
+        tag: "Parte 1",
+        imageSrc: "q4.png",
+        prompt: "Um paciente apresenta ciclos assistidos frequentes, mesmo sem evidência de esforço inspiratório correspondente. Ao avaliar o sistema, a equipe identifica possível vazamento no circuito. Qual assincronia deve ser investigada?",
+        options: [
+          { letter: "A", text: "Disparo reverso" },
+          { letter: "B", text: "Disparo ineficaz" },
+          { letter: "C", text: "Autodisparo" },
+          { letter: "D", text: "Ciclagem tardia" }
+        ],
+        correct: "C",
+        comment: "Gabarito: C) Autodisparo. O autodisparo ocorre quando o ventilador inicia ciclos sem esforço inspiratório do paciente, podendo ser favorecido por fatores como vazamento no circuito, condensado, oscilações ou sensibilidade ajustada que capta alterações externas ao esforço do paciente."
+      },
+      {
+        id: "q5",
+        section: "Assincronias",
+        numberLabel: "Questão 5",
+        tag: "Parte 1",
+        imageSrc: "q5.png",
+        prompt: "Em VCV, o paciente demonstra desconforto e esforço inspiratório durante a oferta do fluxo. Na curva de pressão, observa-se uma concavidade durante a inspiração. Qual é a causa mais provável?",
+        options: [
+          { letter: "A", text: "Fluxo insuficiente" },
+          { letter: "B", text: "Fluxo excessivo" },
+          { letter: "C", text: "Autodisparo" },
+          { letter: "D", text: "Ciclagem tardia" }
+        ],
+        correct: "A",
+        comment: "Gabarito: A) Fluxo insuficiente. Em ventilação controlada a volume (VCV), quando a oferta de fluxo inspiratório é insuficiente para a demanda do paciente durante a inspiração, o esforço inspiratório gera desconforto e concavidade na curva de pressão."
+      },
+      {
+        id: "q6",
+        section: "Assincronias",
+        numberLabel: "Questão 6",
+        tag: "Parte 1",
+        imageSrc: "q6.png",
+        prompt: "Um paciente em PCV, com entrega rápida da pressão inspiratória (Pinsp) e apresentando desconforto associado à insuflação. Qual ajuste deve ser considerado, após avaliar o contexto clínico e o modo ventilatório?",
+        options: [
+          { letter: "A", text: "Aumentar o fluxo inspiratório" },
+          { letter: "B", text: "Ajustar o tempo de rampa (rise time)" },
+          { letter: "C", text: "Aumentar a sensibilidade de disparo até ocorrer autodisparo" },
+          { letter: "D", text: "Prolongar obrigatoriamente o tempo inspiratório" }
+        ],
+        correct: "B",
+        comment: "Gabarito: B) Ajustar o tempo de rampa (rise time). Em modos limitados a pressão como a PCV, o tempo de rampa (rise time) determina a velocidade de subida da pressão até o nível de Pinsp, devendo ser avaliado e ajustado conforme o conforto do paciente e o contexto clínico."
+      },
+      {
+        id: "q7",
+        section: "Assincronias",
+        numberLabel: "Questão 7",
+        tag: "Parte 1",
+        imageSrc: "q7.png",
+        prompt: "Durante a ventilação em PSV, o ventilador encerra a inspiração enquanto o paciente ainda mantém esforço inspiratório. Na curva de fluxo, aparece uma deflexão positiva após a ciclagem, e o paciente parece tentar continuar inspirando. Qual assincronia está presente?",
+        options: [
+          { letter: "A", text: "Ciclagem tardia" },
+          { letter: "B", text: "Autodisparo" },
+          { letter: "C", text: "Ciclagem precoce ou prematura" },
+          { letter: "D", text: "Fluxo excessivo" }
+        ],
+        correct: "C",
+        comment: "Gabarito: C) Ciclagem precoce ou prematura. Ocorre quando o ventilador encerra a fase inspiratória antes de o esforço inspiratório do paciente terminar, gerando esforço residual/deflexão após a ciclagem e sensação de insuflação incompleta."
+      },
+      {
+        id: "q8",
+        section: "Assincronias",
+        numberLabel: "Questão 8",
+        tag: "Parte 1",
+        imageSrc: "q8.png",
+        prompt: "Um paciente em PSV começa a realizar esforço expiratório enquanto o ventilador ainda mantém a fase inspiratória. O tempo inspiratório mecânico parece prolongado em relação à necessidade neural do paciente. Esse achado sugere:",
+        options: [
+          { letter: "A", text: "Ciclagem precoce - deve aumentar o % exp" },
+          { letter: "B", text: "Ciclagem tardia - deve aumentar o % exp" },
+          { letter: "C", text: "Ciclagem tardia - deve reduzir o % exp" },
+          { letter: "D", text: "Ciclagem precoce - deve reduzir o % exp" }
+        ],
+        correct: "B",
+        comment: "Gabarito: B) Ciclagem tardia - deve aumentar o % exp. Quando o tempo inspiratório mecânico se prolonga além da demanda inspiratória do paciente em PSV e há início de esforço expiratório durante a fase inspiratória, caracteriza-se ciclagem tardia; aumentar o percentual de ciclagem expiratória (% exp) antecipa o término da inspiração."
+      },
+      {
+        id: "q9",
+        section: "Assincronias",
+        numberLabel: "Questão 9",
+        tag: "Parte 1",
+        imageSrc: "q9.png",
+        prompt: "Ao analisar as curvas de um paciente, o profissional precisa diferenciar dois fenômenos: um esforço inspiratório que não consegue disparar o ventilador e um ciclo mecânico iniciado sem esforço do paciente. Qual alternativa diferencia corretamente essas situações?",
+        options: [
+          { letter: "A", text: "No disparo ineficaz, há esforço sem ciclo correspondente; no autodisparo, o ventilador dispara sem esforço identificável." },
+          { letter: "B", text: "No disparo ineficaz, todos os esforços geram ciclos; no autodisparo, há apenas esforços não detectados." },
+          { letter: "C", text: "No disparo ineficaz, ocorre sempre duplo disparo; no autodisparo, ocorre sempre ciclagem precoce." },
+          { letter: "D", text: "Ambos são definidos exclusivamente pela presença de fluxo inspiratório elevado." }
+        ],
+        correct: "A",
+        comment: "Gabarito: A) No disparo ineficaz, há esforço sem ciclo correspondente; no autodisparo, o ventilador dispara sem esforço identificável. Essa distinção separa claramente a falha de detecção de um esforço real do paciente (disparo ineficaz) do disparo de ciclos sem esforço do paciente (autodisparo)."
+      },
+      {
+        id: "q10",
+        section: "Assincronias",
+        numberLabel: "Questão 10",
+        tag: "Parte 1",
+        imageSrc: "q10.png",
+        prompt: "Em um paciente sedado sob ventilação controlada, um ciclo mecânico é seguido por esforço inspiratório do paciente. Em algumas ocasiões, esse esforço desencadeia um segundo ciclo mecânico, sem intervalo expiratório adequado. Qual afirmação é correta?",
+        options: [
+          { letter: "A", text: "Disparo reverso e duplo disparo são sinônimos." },
+          { letter: "B", text: "O disparo reverso descreve um segundo disparo aparentemente ocasionado por esforço do paciente, mas gerado por reflexo diafragmático relacionado ao ciclo mecânico e VC; o duplo disparo descreve dois ciclos mecânicos próximos, gerados por demanda espontânea do paciente (2 disparos seguidos feitos pelo paciente)." },
+          { letter: "C", text: "O duplo disparo acontece exclusivamente quando há vazamento no circuito." },
+          { letter: "D", text: "O disparo reverso ocorre apenas em ventilação espontânea com pressão de suporte." }
+        ],
+        correct: "B",
+        comment: "Gabarito: B) O disparo reverso descreve um segundo disparo aparentemente ocasionado por esforço do paciente, mas gerado por reflexo diafragmático relacionado ao ciclo mecânico e VC; o duplo disparo descreve dois ciclos mecânicos próximos, gerados por demanda espontânea do paciente (2 disparos seguidos feitos pelo paciente). São mecanismos distintos e não devem ser tratados como sinônimos."
+      },
+      {
+        id: "q11",
+        section: "Assincronias",
+        numberLabel: "Questão 11",
+        tag: "Parte 1",
+        imageSrc: "q11.png",
+        prompt: "Um paciente em VCV apresenta taquipneia, uso de musculatura acessória e desconforto durante a inspiração. A curva de pressão mostra uma deflexão negativa ou concavidade durante a fase inspiratória. Qual interpretação é mais adequada?",
+        options: [
+          { letter: "A", text: "O ventilador está necessariamente fornecendo fluxo excessivo." },
+          { letter: "B", text: "O padrão é compatível com fluxo insuficiente, podendo ser ajustado o fluxo ou mudança de modo ventilatório." },
+          { letter: "C", text: "A curva confirma autodisparo por vazamento." },
+          { letter: "D", text: "O padrão confirma ciclagem tardia, independentemente da fase respiratória." }
+        ],
+        correct: "B",
+        comment: "Gabarito: B) O padrão é compatível com fluxo insuficiente, podendo ser ajustado o fluxo ou mudança de modo ventilatório. A concavidade/deflexão inspiratória na curva de pressão em VCV com desconforto e uso de musculatura acessória sugere fluxo aquém da demanda do paciente, permitindo ajuste do fluxo ou reavaliação do modo ventilatório."
+      },
+      {
+        id: "q12",
+        section: "Assincronias",
+        numberLabel: "Questão 12",
+        tag: "Parte 1",
+        imageSrc: "q12.png",
+        prompt: "Ao observar a curva de fluxo e volume, o profissional identifica dois ciclos inspiratórios consecutivos, com pouco ou nenhum tempo expiratório entre eles. O volume entregue ao sistema respiratório pode ser elevado pela soma dos ciclos. Qual é a principal preocupação clínica?",
+        options: [
+          { letter: "A", text: "Redução obrigatória do volume corrente total." },
+          { letter: "B", text: "Aumento do risco de empilhamento de volumes, volutrauma e ventilação potencialmente lesiva." },
+          { letter: "C", text: "Eliminação do risco de lesão pulmonar." },
+          { letter: "D", text: "Redução inevitável da pressão alveolar." }
+        ],
+        correct: "B",
+        comment: "Gabarito: B) Aumento do risco de empilhamento de volumes, volutrauma e ventilação potencialmente lesiva. Ciclos consecutivos sem tempo expiratório adequado podem somar volumes correntes (empilhamento), elevando o volume e as pressões no sistema respiratório e aumentando o risco de volutrauma e lesão pulmonar."
+      },
+      {
+        id: "q13",
+        section: "Assincronias",
+        numberLabel: "Questão 13",
+        tag: "Parte 1",
+        imageSrc: "q13.png",
+        prompt: "Um paciente com demanda inspiratória prolongada apresenta término precoce da inspiração mecânica, seguido de esforço inspiratório persistente. Em determinadas situações, esse padrão pode contribuir para o surgimento de dois ciclos consecutivos. Qual conduta é mais coerente?",
+        options: [
+          { letter: "A", text: "Avaliar a demanda inspiratória e o tempo inspiratório ajustando-os conforme o modo ventilatório." },
+          { letter: "B", text: "Aumentar a PEEP obrigatoriamente, independentemente da causa." },
+          { letter: "C", text: "Reduzir a sensibilidade do disparo até impedir todos os esforços." },
+          { letter: "D", text: "Ignorar o padrão se a saturação periférica estiver normal." }
+        ],
+        correct: "A",
+        comment: "Gabarito: A) Avaliar a demanda inspiratória e o tempo inspiratório ajustando-os conforme o modo ventilatório. O encerramento precoce da inspiração frente a uma demanda inspiratória prolongada deve ser abordado avaliando o drive/demanda do paciente e ajustando os parâmetros relacionados ao tempo inspiratório e à ciclagem de acordo com o modo utilizado."
+      },
+      {
+        id: "q14",
+        section: "Assincronias",
+        numberLabel: "Questão 14",
+        tag: "Parte 1",
+        prompt: "Em PSV, o paciente inicia a expiração antes de o ventilador encerrar a inspiração. Essa incompatibilidade pode aumentar o desconforto e favorecer esforços respiratórios contra a insuflação mecânica. Qual ajuste pode ser considerado, dependendo do ventilador e da situação clínica?",
+        options: [
+          { letter: "A", text: "Prolongar ainda mais o tempo inspiratório." },
+          { letter: "B", text: "Avaliar a redução do tempo inspiratório, por exemplo, ajustando o critério de ciclagem (% exp) para encerrar a inspiração mais cedo." },
+          { letter: "C", text: "Aumentar a pressão de suporte." },
+          { letter: "D", text: "Aumentar a sensibilidade até produzir ciclos sem esforço." }
+        ],
+        correct: "B",
+        comment: "Gabarito: B) Avaliar a redução do tempo inspiratório, por exemplo, ajustando o critério de ciclagem (% exp) para encerrar a inspiração mais cedo. Quando o esforço expiratório surge antes do término da fase inspiratória em PSV (ciclagem tardia), ajustar o critério de ciclagem (% exp) ajuda a encurtar o tempo inspiratório e reduzir o conflito com a expiração do paciente."
+      },
+
+      // ==================== PARTE 2: VNI ====================
+      {
+        id: "q15",
+        section: "VNI",
+        numberLabel: "Questão 1 (Parte 2)",
+        tag: "Parte 2 • VNI",
+        hasOriginalImage: false,
+        prompt: "Na ventilação não invasiva em dois níveis de pressão (Bilevel), qual é a principal função da IPAP?",
+        options: [
+          { letter: "A", text: "Manter a pressão expiratória e evitar o colapso das vias aéreas." },
+          { letter: "B", text: "Controlar a frequência respiratória do paciente." },
+          { letter: "C", text: "Determinar exclusivamente a concentração de oxigênio ofertada." },
+          { letter: "D", text: "Fornecer pressão de suporte, favorecendo a ventilação alveolar e a eliminação de CO2." }
+        ],
+        correct: "D",
+        comment: "Gabarito: D) Fornecer pressão de suporte, favorecendo a ventilação alveolar e a eliminação de CO2. No Bilevel, a IPAP (pressão inspiratória positiva) fornece o suporte pressórico acima da EPAP, auxiliando no volume corrente, na ventilação alveolar e na eliminação de CO2."
+      },
+      {
+        id: "q16",
+        section: "VNI",
+        numberLabel: "Questão 2 (Parte 2)",
+        tag: "Parte 2 • VNI",
+        hasOriginalImage: false,
+        prompt: "Em um paciente utilizando Bilevel com IPAP de 14 cmH2O e EPAP de 6 cmH2O, qual é a pressão de suporte ofertada?",
+        options: [
+          { letter: "A", text: "6 cmH2O" },
+          { letter: "B", text: "20 cmH2O" },
+          { letter: "C", text: "14 cmH2O" },
+          { letter: "D", text: "8 cmH2O" }
+        ],
+        correct: "D",
+        comment: "Gabarito: D) 8 cmH2O. A pressão de suporte corresponde à diferença entre a IPAP e a EPAP: 14 cmH2O − 6 cmH2O = 8 cmH2O."
+      },
+      {
+        id: "q17",
+        section: "VNI",
+        numberLabel: "Questão 3 (Parte 2)",
+        tag: "Parte 2 • VNI",
+        hasOriginalImage: false,
+        prompt: "Qual situação clínica representa uma indicação clássica de VNI em dois níveis de pressão?",
+        options: [
+          { letter: "A", text: "Exacerbação de DPOC com acidose respiratória e hipercapnia." },
+          { letter: "B", text: "Pneumotórax não drenado" },
+          { letter: "C", text: "Derrame pleural não drenado" },
+          { letter: "D", text: "Edema agudo de pulmão" }
+        ],
+        correct: "A",
+        comment: "Gabarito: A) Exacerbação de DPOC com acidose respiratória e hipercapnia. A exacerbação aguda de DPOC com acidose respiratória e hipercapnia é uma indicação clássica e consolidada para VNI em dois níveis de pressão (Bilevel)."
+      },
+      {
+        id: "q18",
+        section: "VNI",
+        numberLabel: "Questão 4 (Parte 2)",
+        tag: "Parte 2 • VNI",
+        hasOriginalImage: false,
+        prompt: "Qual é a principal característica do modo CPAP?",
+        options: [
+          { letter: "A", text: "Garante volume corrente fixo a cada inspiração." },
+          { letter: "B", text: "Fornece dois níveis distintos de pressão, com suporte inspiratório variável." },
+          { letter: "C", text: "Realiza obrigatoriamente ciclos respiratórios controlados por tempo." },
+          { letter: "D", text: "Mantém uma pressão positiva contínua durante todo o ciclo respiratório." }
+        ],
+        correct: "D",
+        comment: "Gabarito: D) Mantém uma pressão positiva contínua durante todo o ciclo respiratório. O CPAP mantém um único nível de pressão positiva constante durante todo o ciclo respiratório espontâneo, sem pressão de suporte adicional."
+      },
+      {
+        id: "q19",
+        section: "VNI",
+        numberLabel: "Questão 5 (Parte 2)",
+        tag: "Parte 2 • VNI",
+        hasOriginalImage: false,
+        prompt: "Um paciente com edema agudo de pulmão cardiogênico apresenta dispneia intensa, FR 34 irpm, SpO2 82% em AA e PA 180/100 mmHg. Está consciente e colaborativo. Qual estratégia inicial de suporte não invasivo é mais apropriada?",
+        options: [
+          { letter: "A", text: "VNI em pressão de suporte mínima, sem oferta de oxigênio." },
+          { letter: "B", text: "Oxigênio em baixo fluxo, sem reavaliação clínica." },
+          { letter: "C", text: "CPAP, com pressão inicial ajustada e oxigênio titulado conforme a saturação." },
+          { letter: "D", text: "Bilevel como primeira escolha obrigatória." }
+        ],
+        correct: "C",
+        comment: "Gabarito: C) CPAP, com pressão inicial ajustada e oxigênio titulado conforme a saturação. No edema agudo de pulmão cardiogênico com hipoxemia significativa em paciente consciente e colaborativo, o CPAP com ajuste pressórico inicial e oxigênio titulado para a saturação é uma estratégia inicial apropriada."
+      },
+      {
+        id: "q20",
+        section: "VNI",
+        numberLabel: "Questão 6 (Parte 2)",
+        tag: "Parte 2 • VNI",
+        hasOriginalImage: false,
+        prompt: "Homem de 68 anos, com DPOC exacerbada, apresenta pH 7,27, PaCO2 68 mmHg, FR 32 irpm e está consciente, colaborativo e protegendo a via aérea. Qual é a melhor conduta ventilatória inicial?",
+        options: [
+          { letter: "A", text: "Iniciar CNAF e aguardar normalização espontânea do pH." },
+          { letter: "B", text: "Iniciar imediatamente VMI em todos os casos de pH abaixo de 7,30." },
+          { letter: "C", text: "CPAP isolado, pois a pressão expiratória corrige diretamente a hipercapnia." },
+          { letter: "D", text: "Bilevel, com ajuste de IPAP e EPAP e monitorização da resposta clínica e gasométrica." }
+        ],
+        correct: "D",
+        comment: "Gabarito: D) Bilevel, com ajuste de IPAP e EPAP e monitorização da resposta clínica e gasométrica. Com pH 7,27, PaCO2 68 mmHg, consciência preservada e proteção de via aérea na DPOC exacerbada, o Bilevel com titulação de IPAP e EPAP e reavaliação clínica e gasométrica é a conduta inicial indicada."
+      },
+      {
+        id: "q21",
+        section: "VNI",
+        numberLabel: "Questão 7 (Parte 2)",
+        tag: "Parte 2 • VNI",
+        hasOriginalImage: false,
+        prompt: "Após 1 hora de VNI, um paciente apresenta aumento da FR de 30 para 40 irpm, piora do nível de consciência, uso crescente de musculatura acessória e queda da SpO2 apesar dos ajustes. Qual deve ser a principal preocupação da equipe?",
+        options: [
+          { letter: "A", text: "Falha da VNI, com necessidade de avaliação imediata para escalonamento do suporte e possível intubação." },
+          { letter: "B", text: "Indicação de manter a VNI por mais 6 horas antes de reavaliar." },
+          { letter: "C", text: "Adaptação fisiológica esperada nas primeiras horas de VNI." },
+          { letter: "D", text: "Necessidade de recalcular a Pmus e verificar a PS adequada." }
+        ],
+        correct: "A",
+        comment: "Gabarito: A) Falha da VNI, com necessidade de avaliação imediata para escalonamento do suporte e possível intubação. Piora da frequência respiratória, do nível de consciência, do esforço muscular e da oxigenação após 1 hora de VNI aponta para falha do suporte não invasivo, exigindo reavaliação imediata para escalonamento e eventual intubação."
+      },
+      {
+        id: "q22",
+        section: "VNI",
+        numberLabel: "Questão 8 (Parte 2)",
+        tag: "Parte 2 • VNI",
+        hasOriginalImage: false,
+        prompt: "Um paciente em Bilevel apresenta melhora da oxigenação após aumento da EPAP. Entretanto, a IPAP foi mantida no mesmo valor. Qual consequência pode ocorrer sobre a pressão de suporte?",
+        options: [
+          { letter: "A", text: "A pressão de suporte passa a ser determinada pela FiO2." },
+          { letter: "B", text: "A pressão de suporte aumenta." },
+          { letter: "C", text: "A pressão de suporte diminui." },
+          { letter: "D", text: "A pressão de suporte permanece obrigatoriamente igual." }
+        ],
+        correct: "C",
+        comment: "Gabarito: C) A pressão de suporte diminui. Como a pressão de suporte no Bilevel corresponde à diferença entre IPAP e EPAP (IPAP − EPAP), aumentar a EPAP sem elevar a IPAP reduz a pressão de suporte ofertada."
+      },
+      {
+        id: "q23",
+        section: "VNI",
+        numberLabel: "Questão 9 (Parte 2)",
+        tag: "Parte 2 • VNI",
+        hasOriginalImage: false,
+        prompt: "Paciente com pneumonia grave em VNI evoluiu sem sinais de melhora clínica, apresenta após 1 hora: FC 128 bpm, pH 7,28, Glasgow 14, PaO2 58 mmHg com FiO2 0,50 e FR 42 irpm. Considerando o HACOR original, qual é a pontuação e sua interpretação?",
+        options: [
+          { letter: "A", text: "11 pontos, indicando risco intermediário." },
+          { letter: "B", text: "17 pontos, indicando falha obrigatória da VNI." },
+          { letter: "C", text: "8 pontos, indicando baixo risco de falha." },
+          { letter: "D", text: "14 pontos, indicando alto risco de falha da VNI." }
+        ],
+        correct: "D",
+        comment: "Gabarito: D) 14 pontos, indicando alto risco de falha da VNI. No escore HACOR original após 1 hora: FC 128 bpm (≥ 121 = 1 ponto), pH 7,28 (7,25–7,29 = 3 pontos), Glasgow 14 (13–14 = 2 pontos), PaO2/FiO2 = 58 / 0,50 = 116 mmHg (101–125 = 4 pontos) e FR 42 irpm (41–45 = 4 pontos), totalizando 1 + 3 + 2 + 4 + 4 = 14 pontos, o que indica alto risco de falha da VNI."
+      },
+      {
+        id: "q24",
+        section: "VNI",
+        numberLabel: "Questão 10 (Parte 2)",
+        tag: "Parte 2 • VNI",
+        prompt: "Paciente em VNI apresenta melhora da FR, redução do uso de musculatura acessória, melhora do pH e queda da PaCO2 após 2 horas. Qual interpretação é mais adequada?",
+        options: [
+          { letter: "A", text: "Falha da VNI, pois a PaCO2 ainda não está necessariamente normalizada." },
+          { letter: "B", text: "Necessidade de aumentar obrigatoriamente a IPAP, mesmo com melhora." },
+          { letter: "C", text: "Indicação de suspender imediatamente a VNI, sem teste de tolerância." },
+          { letter: "D", text: "Resposta favorável à VNI, devendo manter o suporte de forma contínua por tolerância do paciente e manter a monitorização." }
+        ],
+        correct: "D",
+        comment: "Gabarito: D) Resposta favorável à VNI, devendo manter o suporte de forma contínua por tolerância do paciente e manter a monitorização. A redução da frequência respiratória e do trabalho muscular associada à melhora do pH e queda da PaCO2 após 2 horas indica boa resposta inicial à VNI, devendo-se manter o suporte conforme tolerância e prosseguir com monitorização."
+      }
+    ];
+
+    const answers = {};
+    const uploadedImages = {}; // { [questionId]: { dataUrl, name } }
+    let activeSection = "ALL";
+    let onlyPendingOrWrong = false;
+    let searchQuery = "";
+    let activePasteTargetQid = null;
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function setQuestionImage(qid, file) {
+      if (!file || !file.type.startsWith("image/")) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        uploadedImages[qid] = {
+          dataUrl: ev.target.result,
+          name: file.name || "imagem-questao"
+        };
+        renderImageSlot(qid);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function renderImageSlot(qid) {
+      const slot = document.getElementById(`img-slot-${qid}`);
+      const q = QUESTIONS.find((item) => item.id === qid);
+      if (!slot || !q) return;
+
+      const customImg = uploadedImages[qid];
+      const defaultSrc = q.imageSrc || "";
+
+      if (customImg && customImg.dataUrl) {
+        slot.innerHTML = `
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+            <span class="text-xs font-medium text-slate-600">
+              Imagem local: <strong class="text-slate-800">${escapeHtml(customImg.name)}</strong>
+            </span>
+            <button type="button" data-remove-img-qid="${qid}" class="remove-img-btn px-2.5 py-1 rounded-lg text-xs font-medium bg-white border border-rose-200 text-rose-700 hover:bg-rose-50 cursor-pointer transition">
+              Voltar para ${escapeHtml(defaultSrc)}
+            </button>
+          </div>
+          <div class="rounded-xl overflow-hidden border border-slate-200 bg-white p-2 flex justify-center">
+            <img src="${customImg.dataUrl}" alt="${escapeHtml(q.numberLabel)}" class="max-h-80 w-auto object-contain rounded-lg" />
+          </div>
+        `;
+      } else if (defaultSrc) {
+        slot.innerHTML = `
+          <div class="rounded-xl overflow-hidden border border-slate-200 bg-white p-2.5">
+            <img
+              id="img-tag-${qid}"
+              src="${escapeHtml(defaultSrc)}"
+              alt="Curva da ${escapeHtml(q.numberLabel)}"
+              class="max-h-80 w-auto mx-auto object-contain rounded-lg"
+            />
+            <div
+              id="img-fallback-${qid}"
+              data-drop-qid="${qid}"
+              class="img-dropzone hidden rounded-xl border border-dashed border-amber-300 bg-amber-50/60 p-3.5 text-center"
+            >
+              <p class="text-xs text-amber-900 font-semibold">
+                Arquivo <code>${escapeHtml(defaultSrc)}</code> não encontrado na mesma pasta do <code>index.html</code>.
+              </p>
+              <p class="text-[11px] text-amber-800 mt-0.5">
+                Suba o arquivo <code>${escapeHtml(defaultSrc)}</code> junto com o <code>index.html</code> no GitHub ou selecione/cole a imagem aqui para visualizar agora.
+              </p>
+              <div class="mt-2.5 flex flex-wrap items-center justify-center gap-2">
+                <label class="px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 cursor-pointer transition">
+                  Selecionar imagem
+                  <input type="file" accept="image/*" data-upload-qid="${qid}" class="hidden img-file-input" />
+                </label>
+                <button
+                  type="button"
+                  data-paste-qid="${qid}"
+                  class="paste-img-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 cursor-pointer transition"
+                >
+                  Colar imagem (Ctrl+V)
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+
+        const imgEl = document.getElementById(`img-tag-${qid}`);
+        const fallbackEl = document.getElementById(`img-fallback-${qid}`);
+        if (imgEl && fallbackEl) {
+          imgEl.addEventListener("error", () => {
+            imgEl.classList.add("hidden");
+            fallbackEl.classList.remove("hidden");
+          });
+        }
+      }
+
+      bindImageSlotEvents(qid);
+    }
+
+    function bindImageSlotEvents(qid) {
+      const slot = document.getElementById(`img-slot-${qid}`);
+      if (!slot) return;
+
+      slot.querySelectorAll(".img-file-input").forEach((input) => {
+        input.addEventListener("change", (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (file) setQuestionImage(qid, file);
+        });
+      });
+
+      const removeBtn = slot.querySelector(".remove-img-btn");
+      if (removeBtn) {
+        removeBtn.addEventListener("click", () => {
+          delete uploadedImages[qid];
+          renderImageSlot(qid);
+        });
+      }
+
+      const pasteBtn = slot.querySelector(".paste-img-btn");
+      if (pasteBtn) {
+        pasteBtn.addEventListener("click", () => {
+          activePasteTargetQid = qid;
+          pasteBtn.textContent = "Aguardando Ctrl+V / Cmd+V...";
+          pasteBtn.classList.add("ring-2", "ring-sky-500", "border-sky-400");
+        });
+      }
+
+      const dropzone = slot.querySelector(".img-dropzone");
+      if (dropzone) {
+        dropzone.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          dropzone.classList.add("border-sky-500", "bg-sky-50/60");
+        });
+        dropzone.addEventListener("dragleave", () => {
+          dropzone.classList.remove("border-sky-500", "bg-sky-50/60");
+        });
+        dropzone.addEventListener("drop", (e) => {
+          e.preventDefault();
+          dropzone.classList.remove("border-sky-500", "bg-sky-50/60");
+          const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+          if (file) setQuestionImage(qid, file);
+        });
+      }
+    }
+
+    function renderAllQuestions() {
+      const container = document.getElementById("quiz-container");
+      container.innerHTML = "";
+
+      QUIZ_SECTIONS.forEach((sec) => {
+        const secQuestions = QUESTIONS.filter((q) => q.section === sec.id);
+
+        const sectionWrapper = document.createElement("section");
+        sectionWrapper.dataset.sectionGroup = sec.id;
+        sectionWrapper.className = "space-y-4";
+
+        const headerDiv = document.createElement("div");
+        headerDiv.className = "border-b border-slate-200 pb-2.5";
+        headerDiv.innerHTML = `
+          <h2 class="text-base sm:text-lg font-bold text-slate-900">${escapeHtml(sec.title)}</h2>
+          <p class="text-xs sm:text-sm text-slate-500 mt-0.5">${escapeHtml(sec.subtitle)}</p>
+        `;
+        sectionWrapper.appendChild(headerDiv);
+
+        const cardsWrapper = document.createElement("div");
+        cardsWrapper.className = "space-y-4";
+
+        secQuestions.forEach((q) => {
+          const card = document.createElement("article");
+          card.id = `card-${q.id}`;
+          card.dataset.questionId = q.id;
+          card.dataset.section = q.section;
+          card.className = "question-card bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-6 shadow-xs transition";
+
+          const tagBadge = q.tag
+            ? `<span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-sky-50 text-sky-800 border border-sky-200">${escapeHtml(q.tag)}</span>`
+            : "";
+
+          const imageSlotHtml = q.imageSrc
+            ? `<div id="img-slot-${q.id}" class="my-3.5"></div>`
+            : "";
+
+          const optionsHtml = q.options.map((opt) => {
+            return `
+              <button
+                type="button"
+                data-qid="${q.id}"
+                data-letter="${opt.letter}"
+                class="option-btn w-full text-left flex items-start gap-3 p-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 transition cursor-pointer"
+              >
+                <span class="option-badge mt-0.5 w-7 h-7 rounded-lg border border-slate-300 bg-slate-50 text-slate-700 font-bold text-xs flex items-center justify-center shrink-0 transition">
+                  ${escapeHtml(opt.letter)}
+                </span>
+                <span class="text-sm text-slate-800 leading-relaxed flex-1">${escapeHtml(opt.text)}</span>
+                <span class="option-status text-xs font-semibold shrink-0 hidden"></span>
+              </button>
+            `;
+          }).join("");
+
+          card.innerHTML = `
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-bold bg-slate-900 text-white">
+                  ${escapeHtml(q.numberLabel)}
+                </span>
+                ${tagBadge}
+              </div>
+              <button
+                type="button"
+                data-clear-qid="${q.id}"
+                class="clear-btn hidden text-xs font-medium text-slate-500 hover:text-slate-800 underline cursor-pointer"
+              >
+                Limpar resposta
+              </button>
+            </div>
+
+            <p class="text-sm sm:text-base font-semibold text-slate-900 leading-relaxed mb-3">
+              ${escapeHtml(q.prompt)}
+            </p>
+
+            ${imageSlotHtml}
+
+            <div class="space-y-2.5 mt-3">
+              ${optionsHtml}
+            </div>
+
+            <!-- Feedback imediato da questão -->
+            <div id="feedback-${q.id}" class="hidden mt-4 pt-4 border-t border-slate-100 feedback-reveal"></div>
+          `;
+
+          cardsWrapper.appendChild(card);
+        });
+
+        sectionWrapper.appendChild(cardsWrapper);
+        container.appendChild(sectionWrapper);
+      });
+
+      QUESTIONS.forEach((q) => {
+        if (q.imageSrc) {
+          renderImageSlot(q.id);
+        }
+      });
+
+      bindEvents();
+      syncAllCardsUI();
+      updateStatsAndFilters();
+    }
+
+    function bindEvents() {
+      document.querySelectorAll(".option-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const qid = btn.dataset.qid;
+          const letter = btn.dataset.letter;
+          answers[qid] = letter;
+          updateSingleCardUI(qid);
+          updateStatsAndFilters();
+        });
+      });
+
+      document.querySelectorAll(".clear-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const qid = btn.dataset.clearQid;
+          delete answers[qid];
+          updateSingleCardUI(qid);
+          updateStatsAndFilters();
+        });
+      });
+
+      document.querySelectorAll(".filter-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          activeSection = btn.dataset.section;
+          document.querySelectorAll(".filter-btn").forEach((b) => {
+            if (b.dataset.section === activeSection) {
+              b.className = "filter-btn active px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer shrink-0 bg-sky-700 text-white";
+            } else {
+              b.className = "filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer shrink-0 bg-slate-100 text-slate-700 hover:bg-slate-200";
+            }
+          });
+          applyFilters();
+        });
+      });
+
+      const searchInput = document.getElementById("search-input");
+      if (searchInput) {
+        searchInput.addEventListener("input", (e) => {
+          searchQuery = e.target.value.trim().toLowerCase();
+          applyFilters();
+        });
+      }
+
+      const toggleFilter = document.getElementById("toggle-pending-or-wrong");
+      toggleFilter.addEventListener("change", (e) => {
+        onlyPendingOrWrong = e.target.checked;
+        applyFilters();
+      });
+
+      document.getElementById("btn-reset-all").addEventListener("click", () => {
+        Object.keys(answers).forEach((k) => delete answers[k]);
+        syncAllCardsUI();
+        updateStatsAndFilters();
+      });
+
+      // Suporte para colar imagem via Ctrl+V / Cmd+V
+      document.addEventListener("paste", (e) => {
+        const items = e.clipboardData && e.clipboardData.items;
+        if (!items) return;
+
+        let imageFile = null;
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].type && items[i].type.startsWith("image/")) {
+            imageFile = items[i].getAsFile();
+            break;
+          }
+        }
+        if (!imageFile) return;
+
+        let targetQid = activePasteTargetQid;
+        if (!targetQid) {
+          const activeEl = document.activeElement;
+          const card = activeEl && activeEl.closest ? activeEl.closest(".question-card") : null;
+          if (card && QUESTIONS.find((x) => x.id === card.dataset.questionId)?.imageSrc) {
+            targetQid = card.dataset.questionId;
+          }
+        }
+
+        if (targetQid) {
+          e.preventDefault();
+          setQuestionImage(targetQid, imageFile);
+          activePasteTargetQid = null;
+        }
+      });
+    }
+
+    function updateSingleCardUI(qid) {
+      const q = QUESTIONS.find((item) => item.id === qid);
+      const card = document.getElementById(`card-${qid}`);
+      const feedbackEl = document.getElementById(`feedback-${qid}`);
+      const clearBtn = card.querySelector(".clear-btn");
+      const chosen = answers[qid];
+
+      const optionButtons = card.querySelectorAll(".option-btn");
+      optionButtons.forEach((btn) => {
+        const letter = btn.dataset.letter;
+        const badge = btn.querySelector(".option-badge");
+        const status = btn.querySelector(".option-status");
+
+        btn.className = "option-btn w-full text-left flex items-start gap-3 p-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 transition cursor-pointer";
+        badge.className = "option-badge mt-0.5 w-7 h-7 rounded-lg border border-slate-300 bg-slate-50 text-slate-700 font-bold text-xs flex items-center justify-center shrink-0 transition";
+        status.className = "option-status text-xs font-semibold shrink-0 hidden";
+        status.textContent = "";
+
+        if (!chosen) return;
+
+        if (letter === q.correct) {
+          btn.className = "option-btn w-full text-left flex items-start gap-3 p-3.5 rounded-xl border-2 border-emerald-500 bg-emerald-50/70 transition cursor-pointer";
+          badge.className = "option-badge mt-0.5 w-7 h-7 rounded-lg border border-emerald-600 bg-emerald-600 text-white font-bold text-xs flex items-center justify-center shrink-0 transition";
+          status.className = "option-status text-xs font-bold text-emerald-700 shrink-0";
+          status.textContent = letter === chosen ? "Sua escolha • Correta" : "Gabarito";
+        } else if (letter === chosen) {
+          btn.className = "option-btn w-full text-left flex items-start gap-3 p-3.5 rounded-xl border-2 border-rose-500 bg-rose-50/70 transition cursor-pointer";
+          badge.className = "option-badge mt-0.5 w-7 h-7 rounded-lg border border-rose-600 bg-rose-600 text-white font-bold text-xs flex items-center justify-center shrink-0 transition";
+          status.className = "option-status text-xs font-bold text-rose-700 shrink-0";
+          status.textContent = "Sua escolha • Incorreta";
+        }
+      });
+
+      if (!chosen) {
+        clearBtn.classList.add("hidden");
+        feedbackEl.classList.add("hidden");
+        feedbackEl.innerHTML = "";
+        return;
+      }
+
+      clearBtn.classList.remove("hidden");
+      const isRight = chosen === q.correct;
+
+      feedbackEl.className = `mt-4 pt-4 border-t border-slate-100 feedback-reveal rounded-xl p-4 border ${
+        isRight
+          ? "bg-emerald-50/80 border-emerald-200 text-emerald-950"
+          : "bg-rose-50/80 border-rose-200 text-rose-950"
+      }`;
+
+      feedbackEl.innerHTML = `
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+          <span class="text-sm font-bold ${isRight ? "text-emerald-800" : "text-rose-800"}">
+            ${isRight ? "✓ Você acertou!" : "✕ Você errou"}
+          </span>
+          <span class="text-xs font-bold px-2.5 py-0.5 rounded-full ${
+            isRight ? "bg-emerald-100 text-emerald-900" : "bg-rose-100 text-rose-900"
+          }">
+            Gabarito: ${escapeHtml(q.correct)}
+          </span>
+        </div>
+        <p class="text-xs sm:text-sm leading-relaxed text-slate-800">
+          <strong class="font-semibold text-slate-900">Comentário:</strong> ${escapeHtml(q.comment)}
+        </p>
+      `;
+    }
+
+    function syncAllCardsUI() {
+      QUESTIONS.forEach((q) => updateSingleCardUI(q.id));
+    }
+
+    function updateStatsAndFilters() {
+      let answeredCount = 0;
+      let correctCount = 0;
+      let wrongCount = 0;
+
+      QUESTIONS.forEach((q) => {
+        const chosen = answers[q.id];
+        if (chosen) {
+          answeredCount++;
+          if (chosen === q.correct) {
+            correctCount++;
+          } else {
+            wrongCount++;
+          }
+        }
+      });
+
+      const pct = Math.round((answeredCount / QUESTIONS.length) * 100);
+      document.getElementById("stat-answered").textContent = answeredCount;
+      document.getElementById("stat-percent").textContent = `${pct}%`;
+      document.getElementById("stat-correct").textContent = correctCount;
+      document.getElementById("stat-wrong").textContent = wrongCount;
+      document.getElementById("progress-bar").style.width = `${pct}%`;
+
+      applyFilters();
+    }
+
+    function matchesSearch(q, query) {
+      if (!query) return true;
+      const hay = [
+        q.numberLabel,
+        q.section,
+        q.prompt,
+        ...q.options.map((o) => `${o.letter} ${o.text}`)
+      ].join(" ").toLowerCase();
+      return hay.includes(query);
+    }
+
+    function applyFilters() {
+      let visibleCardsTotal = 0;
+
+      QUIZ_SECTIONS.forEach((sec) => {
+        const groupEl = document.querySelector(`[data-section-group="${sec.id}"]`);
+        const sectionMatches = activeSection === "ALL" || activeSection === sec.id;
+
+        if (!sectionMatches) {
+          groupEl.classList.add("hidden");
+          return;
+        }
+
+        const cardsInGroup = groupEl.querySelectorAll(".question-card");
+        let visibleInGroup = 0;
+
+        cardsInGroup.forEach((card) => {
+          const qid = card.dataset.questionId;
+          const q = QUESTIONS.find((item) => item.id === qid);
+          const chosen = answers[qid];
+          const isPendingOrWrong = !chosen || chosen !== q.correct;
+
+          const shouldShow =
+            (!onlyPendingOrWrong || isPendingOrWrong) &&
+            matchesSearch(q, searchQuery);
+
+          if (shouldShow) {
+            card.classList.remove("hidden");
+            visibleInGroup++;
+            visibleCardsTotal++;
+          } else {
+            card.classList.add("hidden");
+          }
+        });
+
+        if (visibleInGroup > 0) {
+          groupEl.classList.remove("hidden");
+        } else {
+          groupEl.classList.add("hidden");
+        }
+      });
+
+      const emptyState = document.getElementById("empty-filter-state");
+      if (visibleCardsTotal === 0) {
+        emptyState.classList.remove("hidden");
+      } else {
+        emptyState.classList.add("hidden");
+      }
+    }
+
+    renderAllQuestions();
+  </script>
+</body>
+</html>
